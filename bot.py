@@ -7,7 +7,7 @@ import bottoken
 INTENTS = discord.Intents.all()
 client = discord.Client(intents = INTENTS)
 
-conn = sqlite3.connect('C:\\Users\\jeong\\OneDrive\\문서\\GitHub\\Studytime\\studytime\\studytime_everywhere.db')  #데이터베이스 연결
+conn = sqlite3.connect('C:\\Users\\jeong\\OneDrive\\문서\\GitHub\\Studytime\\studytime\\studytime.db')  #데이터베이스 연결
 cursor = conn.cursor()
 
 async def check_12hour_exception():                         #10분에 한번씩 12시간 이상 공부중인 유저 확인 및 기록 취소
@@ -52,10 +52,12 @@ async def on_message(message):
         공부시작 (등록한 아이디) : 타이머를 시작하며, 현재 시간을 기준으로 합니다.
         공부종료 (등록한 아이디) : 타이머를 종료하며, 데이터베이스에 공부시간을 기록합니다.
         정보 (등록한 아이디) : 해당 아이디를 등록한 유저의 공부 시간을 불러옵니다.
+        공부초기화 (등록한 아이디) : 해당 아이디를 등록한 유저의 공부 시간을 0으로 초기화합니다.(확인 절차 없음)
         삭제 (등록한 아이디) : 해당 아이디를 삭제합니다(2번 확인 후 삭제 절차 진행)
     """.format(message.author.mention))
         
     if "!등록" in message.content:      #유저 등록 ex) 유저: "!등록 홍길동 "
+        userid = message.author.id
         msg = message.content
         tempUID = msg[4:].strip()  #아이디 추출, 공백 제거 ex) '!등록 " 부분과 홍길동 뒤의 공백 삭제
         if not tempUID:
@@ -68,42 +70,46 @@ async def on_message(message):
                 return
             cursor.execute('INSERT INTO study_data (USERID) VALUES (?)', (tempUID,)) #유저ID 데이터베이스에 추가
             conn.commit() #말그대로 커밋
+            cursor.execute('UPDATE study_data SET discord_UID = ?', (userid,))
+            conn.commit()
             await message.channel.send(f"{tempUID}이(가) 등록되었습니다.")
             return
 
 
     if "!공부시작" in message.content:  #공부시작 ex) 유저: "!공부시작 홍길동"
+        userid = message.author.id
         msg = message.content
         tempUID = msg[6:].strip()
         if not tempUID:
             await message.channel.send(f"{message.author.mention} <!명령어 이름> 과 같은 형식으로 호출해주세요.")
         else:
-            cursor.execute('SELECT * FROM study_data WHERE USERID = ?', (tempUID,))
+            cursor.execute('SELECT * FROM study_data WHERE USERID = ? AND discord_UID = ?', (tempUID, userid))
             result = cursor.fetchone()
-            
             timenow = time.localtime()
 
+            
             if result: #유저를 찾았다면?
                 if result[2] is not None and result[3] is None:   #행 자체를 튜플로 가져옴 -> 자료 구조 상 USERID, start_time 순서기 때문에 [1] 인 것 같지만 데이터베이스 테이블의 자료구조는 첫 번째 열에 id(1, 2, 3...)가 생김
                     await message.channel.send(f"{message.author.mention} 공부는 이미 시작되었습니다.")
                     return
                 else:
-                    cursor.execute('UPDATE study_data SET time_start = ?, time_end = ?, time_studied = ? WHERE USERID = ?',(None, None, None, tempUID))
+                    cursor.execute('UPDATE study_data SET time_start = ?, time_end = ?, time_studied = ? WHERE USERID = ? AND discord_UID = ?',(None, None, None, tempUID, userid))
                     conn.commit()
-                    cursor.execute('UPDATE study_data SET time_start = ? WHERE USERID = ?', (time.time(), tempUID))
+                    cursor.execute('UPDATE study_data SET time_start = ? WHERE USERID = ? AND discord_UID = ?', (time.time(), tempUID, userid))
                     conn.commit()
                     await message.channel.send(f"{time.strftime('%Y%m%d', timenow)} {time.strftime('%X', timenow)} {tempUID} 유저의 공부 시작 시간을 기록했습니다.")
             else:
-                await message.channel.send(f"{message.author.mention} 해당 유저가 존재하지 않습니다.")
+                await message.channel.send(f"{message.author.mention} 해당 유저가 존재하지 않거나, 다른 사람의 등록 정보로 공부 시간 기록을 시도하고 있습니다.")
             return
     
     if "!공부종료" in message.content:  #공부종료
+        userid = message.author.id
         msg = message.content
         tempUID = msg[6:].strip()
         if not tempUID:
             await message.channel.send(f"{message.author.mention} <!명령어 이름> 과 같은 형식으로 호출해주세요.")
         else:
-            cursor.execute('SELECT * FROM study_data WHERE USERID = ?', (tempUID,))
+            cursor.execute('SELECT * FROM study_data WHERE USERID = ? AND discord_UID = ?', (tempUID, userid))
             result = cursor.fetchone()
 
             if result:
@@ -113,8 +119,8 @@ async def on_message(message):
                 end_time = time.time()
                 study_duration = end_time - result[2]
                 total_time = (result[5] if result[5] else 0) + study_duration
-                cursor.execute('UPDATE study_data SET time_end = ?, time_studied = ?, time_total = ? WHERE USERID = ?',
-                            (end_time, study_duration, total_time, tempUID))
+                cursor.execute('UPDATE study_data SET time_end = ?, time_studied = ?, time_total = ? WHERE USERID = ? AND discord_UID = ?',
+                            (end_time, study_duration, total_time, tempUID, userid))
                 conn.commit()
                 total_study_seconds = int(total_time)
                 total_study_hours = total_study_seconds // 3600
@@ -122,25 +128,26 @@ async def on_message(message):
                 total_study_seconds = total_study_seconds % 60
                 await message.channel.send(f"현재까지 총 {total_study_hours}시간 {total_study_minutes}분 {total_study_seconds}초 공부했습니다.")
             else:
-                await message.channel.send(f"{message.author.mention} 해당 유저가 존재하지 않습니다.")
+                await message.channel.send(f"{message.author.mention} 해당 유저가 존재하지 않거나, 다른 사람의 등록 정보로 공부 시간 기록을 시도하고 있습니다.")
             return
 
     if "!공부초기화" in message.content:  # 공부 초기화
+        userid = message.author.id
         msg = message.content
         tempUID = msg[6:].strip()
         if not tempUID:
             await message.channel.send(f"{message.author.mention} <!명령어 이름> 과 같은 형식으로 호출해주세요.")
         else:
-            cursor.execute('SELECT * FROM study_data WHERE USERID = ?', (tempUID,))
+            cursor.execute('SELECT * FROM study_data WHERE USERID = ? discord_UID = ?', (tempUID, userid))
             result = cursor.fetchone()
 
             if result:  # 해당 유저의 공부 기록 초기화
-                cursor.execute('UPDATE study_data SET time_start = ?, time_end = ?, time_studied = ?, time_total = ? WHERE USERID = ?',
-                        (None, None, None, 0, tempUID))
+                cursor.execute('UPDATE study_data SET time_start = ?, time_end = ?, time_studied = ?, time_total = ? WHERE USERID = ? AND discord_UID = ?',
+                        (None, None, None, 0, tempUID, userid))
                 conn.commit()
                 await message.channel.send(f"{tempUID} 유저의 공부 기록이 초기화되었습니다.")
             else:
-                await message.channel.send(f"{message.author.mention} 해당 유저가 존재하지 않습니다.")
+                await message.channel.send(f"{message.author.mention} 해당 유저가 존재하지 않거나, 다른 사람의 기록에 접근을 시도하고 있습니다.")
             return
     
     if "!정보" in message.content:      #유저 정보 불러오기
@@ -164,13 +171,14 @@ async def on_message(message):
             return
     
     if "!삭제" in message.content:  # 유저 삭제
+        userid = message.author.id
         msg = message.content
         tempUID = msg[4:].strip()  # 사용자 ID 추출 및 공백 제거
         if not tempUID:
             await message.channel.send(f"{message.author.mention} <!명령어 이름> 과 같은 형식으로 호출해주세요.")
         else:
             # 유저가 존재하는지 확인
-            cursor.execute('SELECT * FROM study_data WHERE USERID = ?', (tempUID,))
+            cursor.execute('SELECT * FROM study_data WHERE USERID = ? AND discord_UID = ?', (tempUID, userid))
             result = cursor.fetchone()
         
             if result:
@@ -190,7 +198,7 @@ async def on_message(message):
                         response2 = await client.wait_for('message', timeout=60.0, check=check)
                         if response2.content.upper() == 'Y':
                             # 유저 삭제
-                            cursor.execute('DELETE FROM study_data WHERE USERID = ?', (tempUID,))
+                            cursor.execute('DELETE FROM study_data WHERE USERID = ? AND discord_UID = ?', (tempUID, userid))
                             conn.commit()
                             await message.channel.send(f"{message.author.mention} {tempUID}의 데이터가 삭제되었습니다.")
                         else:
@@ -201,7 +209,7 @@ async def on_message(message):
                     await message.channel.send(f"{message.author.mention} 응답 시간이 초과되어 데이터 삭제가 취소되었습니다.")
             
             else:
-                await message.channel.send(f"{message.author.mention} 해당 유저가 존재하지 않습니다.")
+                await message.channel.send(f"{message.author.mention} 해당 유저가 존재하지 않거나, 다른 유저의 기록에 접근을 시도하고 있습니다.")
     return
 
 
