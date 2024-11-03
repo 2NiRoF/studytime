@@ -7,7 +7,7 @@ import bottoken
 INTENTS = discord.Intents.all()
 client = discord.Client(intents = INTENTS)
 
-conn = sqlite3.connect('C:\\Users\\jeong\OneDrive\\문서\\GitHub\\Studytime\\studytime\\studytime_everywhere.db')  #데이터베이스 연결
+conn = sqlite3.connect('C:\\Users\\exwpf\\Documents\\GitHub\\studytime\\studytime_everywhere.db')  #데이터베이스 연결
 cursor = conn.cursor()
 
 async def check_12hour_exception():                         #10분에 한번씩 12시간 이상 공부중인 유저 확인 및 기록 취소
@@ -111,6 +111,21 @@ async def on_message(message):
             await message.channel.send(f"현재까지 총 {total_study_hours}시간 {total_study_minutes}분 {total_study_seconds}초 공부했습니다.")
             cursor.execute('UPDATE study_data SET time_start = ?, time_end = ?, time_studied = ? WHERE USERID = ?',(None, None, None, tempUID))
             conn.commit()
+        else:
+            await message.channel.send(f"{message.author.mention} 해당 유저가 존재하지 않습니다.")
+        return
+
+    if "!공부초기화" in message.content:  # 공부 초기화
+        msg = message.content
+        tempUID = msg[6:].strip()
+        cursor.execute('SELECT * FROM study_data WHERE USERID = ?', (tempUID,))
+        result = cursor.fetchone()
+
+        if result:  # 해당 유저의 공부 기록 초기화
+            cursor.execute('UPDATE study_data SET time_start = ?, time_end = ?, time_studied = ?, time_total = ? WHERE USERID = ?',
+                       (None, None, None, 0, tempUID))
+            conn.commit()
+            await message.channel.send(f"{tempUID} 유저의 공부 기록이 초기화되었습니다.")
         else:
             await message.channel.send(f"{message.author.mention} 해당 유저가 존재하지 않습니다.")
         return
