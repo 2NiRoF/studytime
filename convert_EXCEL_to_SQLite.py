@@ -1,10 +1,10 @@
 import pandas as pd
 import sqlite3                                                      #판다스랑 요놈이 엑셀을 좀더 쌈@뽕한 데이터베이스(SQLite)로 변환해줌 
 
-excel_file = r'C:\Users\jeong\OneDrive\바탕 화면\StudyTime_EveryWhere\DB.xlsx'
+excel_file = r'C:\Users\jeong\OneDrive\문서\GitHub\Studytime\studytime\DB.xlsx'
 df = pd.read_excel(excel_file, sheet_name='Sheet1')                 #파일 불러오기
 
-conn = sqlite3.connect('studytime_everywhere.db')                   #SQLite 데이터베이스 연결하고 없으면 생성
+conn = sqlite3.connect('studytime.db')                   #SQLite 데이터베이스 연결하고 없으면 생성
 cursor = conn.cursor()                                              #객체 생성(cursor <<<없으면 아무것도못함)
 
 cursor.execute('''
@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS study_data (
     time_start REAL,
     time_end REAL,
     time_studied REAL,
-    time_total REAL
+    time_total REAL,
+    discord_UID TEXT
 )
 ''')                                                                #넌 이제부터 테이블이여
 
