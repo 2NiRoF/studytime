@@ -7,7 +7,7 @@ import bottoken
 INTENTS = discord.Intents.all()
 client = discord.Client(intents = INTENTS)
 
-conn = sqlite3.connect('/home/jeonghoopark1234/studytime_everywhere.db')  #데이터베이스 연결
+conn = sqlite3.connect('C:\\Users\\jeong\OneDrive\\문서\\GitHub\\Studytime\\studytime\\studytime_everywhere.db')  #데이터베이스 연결
 cursor = conn.cursor()
 
 async def check_12hour_exception():                         #10분에 한번씩 12시간 이상 공부중인 유저 확인 및 기록 취소
@@ -74,6 +74,8 @@ async def on_message(message):
         tempUID = msg[6:].strip()
         cursor.execute('SELECT * FROM study_data WHERE USERID = ?', (tempUID,))
         result = cursor.fetchone()
+        
+        timenow = time.localtime()
 
         if result: #유저를 찾았다면?
             if result[2] is not None:   #행 자체를 튜플로 가져옴 -> 자료 구조 상 USERID, start_time 순서기 때문에 [1] 인 것 같지만 데이터베이스 테이블의 자료구조는 첫 번째 열에 id(1, 2, 3...)가 생김
@@ -81,7 +83,7 @@ async def on_message(message):
                 return
             cursor.execute('UPDATE study_data SET time_start = ? WHERE USERID = ?', (time.time(), tempUID))
             conn.commit()
-            await message.channel.send(f"{time.strftime('%c', time.localtime(time.time()))} {tempUID} 유저의 공부 시작 시간을 기록했습니다.")
+            await message.channel.send(f"{time.strftime('%Y%m%d', timenow)} {time.strftime('%X', timenow)} {tempUID} 유저의 공부 시작 시간을 기록했습니다.")
         else:
             await message.channel.send(f"{message.author.mention} 해당 유저가 존재하지 않습니다.")
         return
