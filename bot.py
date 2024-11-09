@@ -116,7 +116,7 @@ async def on_message(message):
             result = cursor.fetchone()
 
             if result:
-                if result[2] is None:
+                if result[3] is None:
                     await message.channel.send(f"{message.author.mention} 공부 종료는 공부 시작 이후에 가능합니다.")
                     return
                 end_time = time.time()
