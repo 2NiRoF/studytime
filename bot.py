@@ -3,6 +3,8 @@ import sqlite3
 import time
 import asyncio
 import bottoken
+from datetime import datetime, timedelta, timezone
+from discord.utils import get
 
 INTENTS = discord.Intents.all()
 client = discord.Client(intents = INTENTS)
@@ -226,7 +228,30 @@ async def on_message(message):
             
             else:
                 await message.channel.send(f"{message.author.mention} 해당 유저가 존재하지 않거나, 다른 유저의 기록에 접근을 시도하고 있습니다.")
-    return
+        return
+    
+    #개발자 기능
+    if message.content == "!유저테이블":
+        role = get(message.author.roles, id=1304795239436783666)
+        if role:
+            print("BotModerator accessed whole user table.")
+            cursor.execute('SELECT * FROM study_data')
+            result = cursor.fetchall()
+
+            if result:
+                formatted_result = "\n".join(
+                    [f"ID: {row[0]}, Name: {row[1]}, Start(Latest): {datetime.fromtimestamp(row[2], tz=timezone.utc) + timedelta(hours=9):%Y-%m-%d %H:%M:%S}, "
+                     f"End(Latest): {datetime.fromtimestamp(row[3], tz=timezone.utc) + timedelta(hours=9):%Y-%m-%d %H:%M:%S}, "
+                     f"Duration: {row[4]:.2f}s"
+                     for row in result]
+                )
+                await message.channel.send(f"```{formatted_result}```")
+            else:
+                await message.channel.send(f"No data found in the table.")
+            return
+        else:
+            print("unauthorized user tried user table access.")
+        return
 
 
 
