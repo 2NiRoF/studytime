@@ -115,7 +115,7 @@ async def on_message(message):
             result = cursor.fetchone()
 
             if result:
-                if result[2] is None:
+                if result[3] is not None:
                     await message.channel.send(f"{message.author.mention} 공부 종료는 공부 시작 이후에 가능합니다.")
                     return
                 end_time = time.time()
@@ -134,7 +134,7 @@ async def on_message(message):
             return
         
     if "!랭킹" in message.content:  # 랭킹 표시
-        cursor.execute('SELECT USERID, time_total FROM study_data WHERE time_total IS NOT NULL ORDER BY time_total DESC')
+        cursor.execute('SELECT USERID, time_total FROM study_data WHERE time_total IS NOT NULL ORDER BY time_total DESC LIMIT 5')
         ranking_data = cursor.fetchall()
 
         if ranking_data:
@@ -240,10 +240,10 @@ async def on_message(message):
 
             if result:
                 formatted_result = "\n".join(
-                    [f"ID: {row[0]}, Name: {row[1]}, Start(Latest): {datetime.fromtimestamp(row[2], tz=timezone.utc) + timedelta(hours=9):%Y-%m-%d %H:%M:%S}, "
-                     f"End(Latest): {datetime.fromtimestamp(row[3], tz=timezone.utc) + timedelta(hours=9):%Y-%m-%d %H:%M:%S}, "
-                     f"Duration: {row[4]:.2f}s"
-                     for row in result]
+                    [
+                        f"Name: {row[1]}, "+(f"Start(Latest): {datetime.fromtimestamp(row[2], tz=timezone.utc) + timedelta(hours=9):%Y-%m-%d %H:%M:%S}, " if row[2] is not None else "Start(Latest): None, ")+(f"End(Latest): {datetime.fromtimestamp(row[3], tz=timezone.utc) + timedelta(hours=9):%Y-%m-%d %H:%M:%S}, " if row[3] is not None else "End(Latest): None, ")+f"Duration: {int(row[4] // 3600)}h {int((row[4] % 3600) // 60)}m {int(row[4] % 60)}s" if row[4] is not None else "Duration: None"
+                        for row in result
+                    ]
                 )
                 await message.channel.send(f"```{formatted_result}```")
             else:
