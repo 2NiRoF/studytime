@@ -7,7 +7,7 @@ import bottoken
 INTENTS = discord.Intents.all()
 client = discord.Client(intents = INTENTS)
 
-conn = sqlite3.connect('C:\\Users\\jeong\\OneDrive\\문서\\GitHub\\Studytime\\studytime\\studytime.db')  #데이터베이스 연결
+conn = sqlite3.connect('C:\\Users\\exwpf\\Documents\\GitHub\\studytime\\studytime.db')  #데이터베이스 연결
 cursor = conn.cursor()
 
 async def check_12hour_exception():                         #10분에 한번씩 12시간 이상 공부중인 유저 확인 및 기록 취소
@@ -130,6 +130,22 @@ async def on_message(message):
             else:
                 await message.channel.send(f"{message.author.mention} 해당 유저가 존재하지 않거나, 다른 사람의 등록 정보로 공부 시간 기록을 시도하고 있습니다.")
             return
+        
+    if "!랭킹" in message.content:  # 랭킹 표시
+        cursor.execute('SELECT USERID, time_total FROM study_data WHERE time_total IS NOT NULL ORDER BY time_total DESC')
+        ranking_data = cursor.fetchall()
+
+        if ranking_data:
+            ranking_message = "📊 **공부 시간 랭킹** 📊\n"
+            for rank, (user_id, total_time) in enumerate(ranking_data, start=1):
+                hours = int(total_time) // 3600
+                minutes = (int(total_time) % 3600) // 60
+                seconds = int(total_time) % 60
+                ranking_message += f"{rank}위 - {user_id}: {hours}시간 {minutes}분 {seconds}초\n"
+            
+            await message.channel.send(ranking_message)
+        else:
+            await message.channel.send("현재 기록된 유저가 없습니다.")
 
     if "!공부초기화" in message.content:  # 공부 초기화
         userid = message.author.id
@@ -211,6 +227,7 @@ async def on_message(message):
             else:
                 await message.channel.send(f"{message.author.mention} 해당 유저가 존재하지 않거나, 다른 유저의 기록에 접근을 시도하고 있습니다.")
     return
+
 
 
 client.run(bottoken.TOKEN)
