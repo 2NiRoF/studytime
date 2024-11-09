@@ -91,6 +91,7 @@ async def on_message(message):
 
             
             if result: #유저를 찾았다면?
+                print("Timer started.")
                 if result[2] is not None and result[3] is None:   #행 자체를 튜플로 가져옴 -> 자료 구조 상 USERID, start_time 순서기 때문에 [1] 인 것 같지만 데이터베이스 테이블의 자료구조는 첫 번째 열에 id(1, 2, 3...)가 생김
                     await message.channel.send(f"{message.author.mention} 공부는 이미 시작되었습니다.")
                     return
@@ -115,7 +116,7 @@ async def on_message(message):
             result = cursor.fetchone()
 
             if result:
-                if result[3] is not None:
+                if result[2] is None:
                     await message.channel.send(f"{message.author.mention} 공부 종료는 공부 시작 이후에 가능합니다.")
                     return
                 end_time = time.time()
@@ -138,6 +139,7 @@ async def on_message(message):
         ranking_data = cursor.fetchall()
 
         if ranking_data:
+            print("Ranking printed.")
             ranking_message = "📊 **공부 시간 랭킹** 📊\n"
             for rank, (user_id, total_time) in enumerate(ranking_data, start=1):
                 hours = int(total_time) // 3600
@@ -160,6 +162,7 @@ async def on_message(message):
             result = cursor.fetchone()
 
             if result:  # 해당 유저의 공부 기록 초기화
+                print("Success reset.")
                 cursor.execute('UPDATE study_data SET time_start = ?, time_end = ?, time_studied = ?, time_total = ? WHERE USERID = ? AND discord_UID = ?',
                         (None, None, None, 0, tempUID, userid))
                 conn.commit()
@@ -216,6 +219,7 @@ async def on_message(message):
                         response2 = await client.wait_for('message', timeout=60.0, check=check)
                         if response2.content.upper() == 'Y':
                             # 유저 삭제
+                            print("Success delete.")
                             cursor.execute('DELETE FROM study_data WHERE USERID = ? AND discord_UID = ?', (tempUID, userid))
                             conn.commit()
                             await message.channel.send(f"{message.author.mention} {tempUID}의 데이터가 삭제되었습니다.")
