@@ -271,7 +271,22 @@ async def on_message(message):
             if result:
                 formatted_result = "\n".join(
                     [
-                        f"Name: {row[1]}, "+(f"Start(Latest): {datetime.fromtimestamp(row[2], tz=timezone.utc) + timedelta(hours=9):%Y-%m-%d %H:%M:%S}, " if row[2] is not None else "Start(Latest): None, ")+(f"End(Latest): {datetime.fromtimestamp(row[3], tz=timezone.utc) + timedelta(hours=9):%Y-%m-%d %H:%M:%S}, " if row[3] is not None else "End(Latest): None, ")+f"Duration: {int(row[4] // 3600)}h {int((row[4] % 3600) // 60)}m {int(row[4] % 60)}s" if row[4] is not None else "Duration: None"
+                        f"Name: {row[1]}, "
+                        + (
+                            f"Start(Latest): {datetime.fromtimestamp(row[2], tz=timezone.utc) + timedelta(hours=9):%Y-%m-%d %H:%M:%S}, "
+                            if row[2] is not None
+                            else "Start(Latest): None, "
+                        )
+                        + (
+                            f"End(Latest): {datetime.fromtimestamp(row[3], tz=timezone.utc) + timedelta(hours=9):%Y-%m-%d %H:%M:%S}, "
+                            if row[3] is not None
+                            else "End(Latest): None, "
+                        )
+                        + (
+                            f"Duration: {int(row[4] // 3600)}h {int((row[4] % 3600) // 60)}m {int(row[4] % 60)}s"
+                            if row[4] is not None
+                            else "Duration: None"
+                        )
                         for row in result
                     ]
                 )
