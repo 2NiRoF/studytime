@@ -9,7 +9,7 @@ from discord.utils import get
 INTENTS = discord.Intents.all()
 client = discord.Client(intents = INTENTS)
 
-conn = sqlite3.connect('C:\\Users\\jeong\\OneDrive\\문서\\GitHub\\Studytime\\studytime\\studytime.db')  #데이터베이스 연결
+conn = sqlite3.connect('/home/jeonghoopark1234/studytime.db')  #데이터베이스 연결
 cursor = conn.cursor()
 
 async def check_12hour_exception():                         #10분에 한번씩 12시간 이상 공부중인 유저 확인 및 기록 취소
